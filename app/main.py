@@ -50,6 +50,7 @@ def build_agent_settings() -> dict[str, Any]:
         "Before calling create_calendar_event, ensure the interpreted start time is in the future; if not, ask one clarification question and correct it. "
         "Do not ask for duration. Use duration_minutes=30 by default unless the user explicitly provides a different duration. "
         "Always ask for timezone as a separate short question after collecting date/time. "
+        "Accept timezone in either IANA format (for example Europe/Berlin) or UTC offset format (for example UTC+1 or UTC plus one). "
         "Always ask a separate optional-title question before confirmation, for example: "
         "'Would you like to add a meeting title, or proceed without one?' "
         "If the user declines, proceed with no title. "
@@ -117,7 +118,7 @@ def build_agent_settings() -> dict[str, Any]:
                                 },
                                 "timezone": {
                                     "type": "string",
-                                    "description": "Required IANA timezone, for example Europe/Berlin.",
+                                    "description": "Required timezone. Accept IANA (Europe/Berlin) or UTC offset (UTC+1).",
                                 },
                             },
                             "required": ["meeting_with_name", "start_time_iso", "timezone"],
