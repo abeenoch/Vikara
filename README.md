@@ -87,6 +87,15 @@ uvicorn app.main:app --host 0.0.0.0 --port $PORT
 ```
 - environment variables from `.env.example`
 
+Render-specific env checklist:
+- `BASE_URL=https://voice-scheduling-agent-33p6.onrender.com` (or your own Render URL)
+- `GOOGLE_REDIRECT_PATH=/auth/google/callback` (path only, not a full URL)
+- `SESSION_SECRET_KEY=<long-random-string>`
+- `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` (or mount `credentials.json`)
+
+Final redirect URI used by the app is:
+- `https://voice-scheduling-agent-33p6.onrender.com/auth/google/callback`
+
 
 ## Submission checklist
 - GitHub repo: this project

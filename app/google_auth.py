@@ -65,20 +65,33 @@ def generate_google_auth_url(session: dict[str, Any]) -> tuple[str, str]:
     return f"{GOOGLE_AUTH_URL}?{urlencode(params)}", state
 
 
-def exchange_code_for_tokens(code: str, state: str | None = None, session: dict[str, Any] | None = None) -> None:
+def exchange_code_for_tokens(
+    code: str,
+    state: str | None = None,
+    session: dict[str, Any] | None = None,
+    cookie_state: str | None = None,
+) -> None:
     client_id, client_secret = _google_client_config()
-    
-    # Validate state from session
-    if session:
+
+    if not state:
+        raise RuntimeError("Missing OAuth state.")
+
+    state_valid = False
+
+    # Primary validation: in-session state list.
+    if session is not None:
         oauth_states = session.get("oauth_states", [])
-        if state and state not in oauth_states:
-            raise RuntimeError("Invalid OAuth state.")
-        if state and state in oauth_states:
+        if state in oauth_states:
             oauth_states.remove(state)
             session["oauth_states"] = oauth_states
-    elif state:
-        # If no session provided, skip validation (fallback)
-        pass
+            state_valid = True
+
+    # Fallback validation: short-lived HTTP-only state cookie.
+    if cookie_state and secrets.compare_digest(state, cookie_state):
+        state_valid = True
+
+    if not state_valid:
+        raise RuntimeError("Invalid OAuth state.")
 
     payload = urlencode(
         {

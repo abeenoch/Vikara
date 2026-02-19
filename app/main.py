@@ -23,7 +23,12 @@ PUBLIC_DIR = Path("public")
 DEEPGRAM_WS_URL = "wss://agent.deepgram.com/v1/agent/converse"
 
 app = FastAPI(title="Voice Scheduling Agent")
-app.add_middleware(SessionMiddleware, secret_key=settings.session_secret_key)
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=settings.session_secret_key,
+    same_site="lax",
+    https_only=settings.base_url.startswith("https://"),
+)
 app.mount("/static", StaticFiles(directory=PUBLIC_DIR), name="static")
 logger = logging.getLogger("voice_agent")
 
@@ -149,8 +154,18 @@ def google_status() -> dict[str, bool]:
 @app.get("/auth/google/start")
 def auth_google_start(request: Request) -> RedirectResponse:
     try:
-        auth_url, _state = generate_google_auth_url(request.session)
-        return RedirectResponse(auth_url)
+        auth_url, state = generate_google_auth_url(request.session)
+        response = RedirectResponse(auth_url)
+        response.set_cookie(
+            "oauth_state",
+            state,
+            max_age=600,
+            httponly=True,
+            secure=settings.base_url.startswith("https://"),
+            samesite="lax",
+            path="/",
+        )
+        return response
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
@@ -160,8 +175,15 @@ def auth_google_callback(request: Request, code: str = Query(default=""), state:
     if not code:
         raise HTTPException(status_code=400, detail="Missing OAuth code.")
     try:
-        exchange_code_for_tokens(code=code, state=state or None, session=request.session)
-        return RedirectResponse("/?google_connected=1")
+        exchange_code_for_tokens(
+            code=code,
+            state=state or None,
+            session=request.session,
+            cookie_state=request.cookies.get("oauth_state"),
+        )
+        response = RedirectResponse("/?google_connected=1")
+        response.delete_cookie("oauth_state", path="/")
+        return response
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Google OAuth failed: {exc}") from exc
 
